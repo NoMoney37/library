@@ -1,0 +1,37 @@
+# =============================================================================
+#  MODEL CATALOG  —  your personal menu of downloadable models
+# =============================================================================
+#  Format (one model per line):     folder | url
+#  Optional custom filename:        folder | url | filename.safetensors
+#
+#  - "folder" is the subfolder under ComfyUI/models/  (checkpoints, loras,
+#    vae, clip, controlnet, upscale_models, embeddings, diffusion_models, ...)
+#  - Lines starting with #  and blank lines are ignored (use them as headers).
+#  - Host this file RAW on GitHub/Gist and point the picker script at its URL.
+#  - Edit anytime; the pod always pulls the latest version.
+# =============================================================================
+
+# ---------------------------- CHECKPOINTS ------------------------------------
+checkpoints | https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
+checkpoints | https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors
+checkpoints | https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/flux1-schnell-fp8.safetensors
+# checkpoints | https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors   # GATED: needs HF_TOKEN
+
+# ------------------------- TEXT ENCODERS (CLIP) ------------------------------
+clip | https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors
+clip | https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
+
+# --------------------------------- VAE ---------------------------------------
+vae | https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors
+vae | https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
+vae | https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged/resolve/main/split_files/vae/ae.safetensors
+
+# ------------------------------ UPSCALERS ------------------------------------
+upscale_models | https://huggingface.co/lllyasviel/Annotators/resolve/main/RealESRGAN_x4plus.pth
+upscale_models | https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
+
+# -------------------------------- LORAS --------------------------------------
+# loras | https://civitai.com/api/download/models/XXXXXX                         # needs CIVITAI_TOKEN
+
+# ------------------------------ CONTROLNET -----------------------------------
+# controlnet | https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors
