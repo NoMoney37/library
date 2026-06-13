@@ -57,6 +57,9 @@ provisioning_clone_nodes() {
 }
 
 provisioning_start() {
+cd /workspace
+    wget -O getmodel.sh https://github.com/NoMoney37/library/blob/main/getmodel.sh
+    chmod +x getmodel.sh
     echo "[provisioning] Installing custom nodes (no model library prefill)..."
     provisioning_clone_nodes
     echo "[provisioning] Done. Drop a workflow and use 'Workflow Models' to fetch models on demand."
