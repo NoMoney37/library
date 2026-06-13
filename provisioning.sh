@@ -1,68 +1,101 @@
 #!/bin/bash
 # =============================================================================
-#  ComfyUI provisioning script (LEAN) for AI-Dock images (RunPod / Vast)
-#  - Installs ONLY custom nodes (no pre-filled model library)
-#  - Models are downloaded ON DEMAND, per-workflow, via the scanner node
-#  - Everything lands on your network volume, so it persists across pods
+#  ComfyUI provisioning (HARDENED + PINNED) for AI-Dock images
+#  Same as the hardened script, but ComfyUI is pinned to a RELEASE TAG instead
+#  of bleeding-edge master -> stable, predictable behavior for a public template.
 #
-#  HOW ON-DEMAND DOWNLOADING WORKS:
-#    1. Drop a workflow .json onto the ComfyUI canvas.
-#    2. Click "Workflow Models" in the menu bar (added by the scanner node).
-#    3. Hit Auto-Resolve -> it finds + downloads every required model into the
-#       correct ComfyUI/models/<type> folder on your /workspace volume.
+#    1. Update ComfyUI to a release tag -> NEW UI, tested version
+#    2. Install custom nodes            -> Manager + Workflow-Models-Downloader
+#    3. Fetch the model picker          -> getmodel.sh onto the volume
 #
-#  USAGE:
-#    1. Host this file as a RAW text URL (GitHub Gist -> Raw, or Pastebin raw).
-#    2. In your RunPod template, set env var:
-#         PROVISIONING_SCRIPT = https://your-raw-url/provisioning-lean.sh
-#    3. (Optional, for gated/private models) set env vars:
-#         HF_TOKEN        = your HuggingFace token
-#         CIVITAI_TOKEN   = your Civitai token
-#       Then enter the same tokens in the scanner node's Settings inside ComfyUI.
-#
-#  NOTE: Keep the template PRIVATE if you ever put tokens in Docker options.
+#  Idempotent + no `set -e`. Logs every step.
 # =============================================================================
 
-set -euo pipefail
+log(){ echo "[provisioning] $*"; }
 
-# ---- Locate the ComfyUI directory (AI-Dock usually sets COMFYUI_DIR) --------
+# ---- PIN CONTROL ------------------------------------------------------------
+#  ""           -> track the LATEST release tag (stable, auto-advances over time)
+#  "v0.3.40"    -> HARD-PIN to that exact tag (fully reproducible, never moves)
+#  Find current tags at: https://github.com/comfyanonymous/ComfyUI/releases
+COMFYUI_REF=""
+
+# ---- Resolve ComfyUI dir + the ComfyUI venv's pip ---------------------------
 COMFYUI_DIR="${COMFYUI_DIR:-/opt/ComfyUI}"
-[ -d "/workspace/ComfyUI" ] && COMFYUI_DIR="/workspace/ComfyUI"
-[ -d "/workspace/comfyui" ] && COMFYUI_DIR="/workspace/comfyui"
-echo "[provisioning] ComfyUI dir: ${COMFYUI_DIR}"
+[ -d /workspace/ComfyUI ] && COMFYUI_DIR=/workspace/ComfyUI
+PIP="${COMFYUI_VENV_PIP:-pip}"
+log "ComfyUI dir : ${COMFYUI_DIR}"
+log "pip         : ${PIP}"
 
-# ---- Custom nodes to install ------------------------------------------------
+GETMODEL_URL="https://raw.githubusercontent.com/NoMoney37/library/refs/heads/main/getmodel.sh"
+
 CUSTOM_NODES=(
     "https://github.com/ltdrdata/ComfyUI-Manager"
     "https://github.com/slahiri/ComfyUI-Workflow-Models-Downloader"
 )
 
-# ---- Clone nodes (skip if already present) + install their requirements -----
-provisioning_clone_nodes() {
-    local nodes_dir="${COMFYUI_DIR}/custom_nodes"
-    mkdir -p "$nodes_dir"
-    for repo in "${CUSTOM_NODES[@]}"; do
-        local name; name="$(basename "$repo")"
-        if [ -d "${nodes_dir}/${name}" ]; then
-            echo "[skip] custom node ${name} already present"
-        else
-            echo "[git ] cloning ${repo}"
-            git clone --depth 1 "$repo" "${nodes_dir}/${name}" || true
+# =============================================================================
+#  1. Update ComfyUI to a release tag + new frontend
+# =============================================================================
+update_comfyui(){
+    if [ -d "${COMFYUI_DIR}/.git" ]; then
+        git -C "${COMFYUI_DIR}" stash >/dev/null 2>&1
+        log "Fetching ComfyUI tags..."
+        git -C "${COMFYUI_DIR}" fetch --all --tags --prune || log "fetch failed (continuing)"
+
+        local ref="${COMFYUI_REF}"
+        if [ -z "${ref}" ]; then
+            # Resolve the most recent release tag (stable), not master HEAD
+            ref="$(git -C "${COMFYUI_DIR}" describe --tags "$(git -C "${COMFYUI_DIR}" rev-list --tags --max-count=1)" 2>/dev/null)"
         fi
-        if [ -f "${nodes_dir}/${name}/requirements.txt" ]; then
-            echo "[pip ] installing requirements for ${name}"
-            pip install -q -r "${nodes_dir}/${name}/requirements.txt" || true
+
+        if [ -n "${ref}" ]; then
+            log "Checking out ComfyUI ${ref}"
+            git -C "${COMFYUI_DIR}" checkout -f "${ref}" || log "checkout ${ref} failed (continuing)"
+        else
+            log "Could not resolve a tag; leaving ComfyUI as-is"
+        fi
+    else
+        log "No .git in ComfyUI dir; skipping update"
+    fi
+    log "Updating ComfyUI dependencies (includes the new frontend package)..."
+    "${PIP}" install -r "${COMFYUI_DIR}/requirements.txt" || log "requirements install had issues (continuing)"
+}
+
+# =============================================================================
+#  2. Custom nodes
+# =============================================================================
+install_nodes(){
+    local dir="${COMFYUI_DIR}/custom_nodes"
+    mkdir -p "${dir}"
+    for repo in "${CUSTOM_NODES[@]}"; do
+        local name; name="$(basename "${repo}")"
+        if [ -d "${dir}/${name}" ]; then
+            log "node present : ${name}"
+        else
+            log "cloning node : ${name}"
+            git clone --depth 1 "${repo}" "${dir}/${name}" || log "CLONE FAILED: ${name}"
+        fi
+        if [ -f "${dir}/${name}/requirements.txt" ]; then
+            "${PIP}" install -r "${dir}/${name}/requirements.txt" || log "deps failed: ${name}"
         fi
     done
 }
 
-provisioning_start() {
-cd /workspace
-    wget -O wget -O getmodel.sh https://raw.githubusercontent.com/NoMoney37/library/refs/heads/main/getmodel.sh
-    chmod +x getmodel.sh
-    echo "[provisioning] Installing custom nodes (no model library prefill)..."
-    provisioning_clone_nodes
-    echo "[provisioning] Done. Drop a workflow and use 'Workflow Models' to fetch models on demand."
+# =============================================================================
+#  3. Model picker
+# =============================================================================
+fetch_picker(){
+    log "Fetching model picker (getmodel.sh)..."
+    if wget -q -O /workspace/getmodel.sh "${GETMODEL_URL}"; then
+        chmod +x /workspace/getmodel.sh
+        log "getmodel.sh ready at /workspace/getmodel.sh"
+    else
+        log "getmodel.sh fetch FAILED"
+    fi
 }
 
-provisioning_start
+log "Starting provisioning..."
+update_comfyui
+install_nodes
+fetch_picker
+log "Provisioning complete. ComfyUI launches after this."
