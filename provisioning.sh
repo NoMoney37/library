@@ -58,7 +58,7 @@ provisioning_clone_nodes() {
 
 provisioning_start() {
 cd /workspace
-    wget -O getmodel.sh https://github.com/NoMoney37/library/blob/main/getmodel.sh
+    wget -O wget -O getmodel.sh https://raw.githubusercontent.com/NoMoney37/library/refs/heads/main/getmodel.sh
     chmod +x getmodel.sh
     echo "[provisioning] Installing custom nodes (no model library prefill)..."
     provisioning_clone_nodes
