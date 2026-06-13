@@ -15,7 +15,6 @@
 checkpoints | https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
 checkpoints | https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors
 checkpoints | https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/flux1-schnell-fp8.safetensors
-# checkpoints | https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors   # GATED: needs HF_TOKEN
 
 # ------------------------- TEXT ENCODERS (CLIP) ------------------------------
 clip | https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors
@@ -31,7 +30,6 @@ upscale_models | https://huggingface.co/lllyasviel/Annotators/resolve/main/RealE
 upscale_models | https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
 
 # -------------------------------- LORAS --------------------------------------
-# loras | https://civitai.com/api/download/models/XXXXXX                         # needs CIVITAI_TOKEN
 
 # ------------------------------ CONTROLNET -----------------------------------
 # controlnet | https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors
