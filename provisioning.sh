@@ -1,22 +1,20 @@
 #!/bin/bash
 # =============================================================================
 #  ComfyUI provisioning (HARDENED + PINNED) for AI-Dock images
-#  Same as the hardened script, but ComfyUI is pinned to a RELEASE TAG instead
-#  of bleeding-edge master -> stable, predictable behavior for a public template.
-#
+#    0. Install system tools         -> aria2 (fast multi-connection downloads)
 #    1. Update ComfyUI to a release tag -> NEW UI, tested version
 #    2. Install custom nodes            -> Manager + Workflow-Models-Downloader
 #    3. Fetch the model picker          -> getmodel.sh onto the volume
 #
-#  Idempotent + no `set -e`. Logs every step.
+#  Idempotent + no `set -e`. Logs every step. Runs on every boot.
 # =============================================================================
 
 log(){ echo "[provisioning] $*"; }
 
 # ---- PIN CONTROL ------------------------------------------------------------
-#  ""           -> track the LATEST release tag (stable, auto-advances over time)
-#  "v0.3.40"    -> HARD-PIN to that exact tag (fully reproducible, never moves)
-#  Find current tags at: https://github.com/comfyanonymous/ComfyUI/releases
+#  ""        -> track the LATEST release tag (stable, auto-advances)
+#  "v0.3.40" -> HARD-PIN to that exact tag (reproducible, never moves)
+#  Tags: https://github.com/comfyanonymous/ComfyUI/releases
 COMFYUI_REF=""
 
 # ---- Resolve ComfyUI dir + the ComfyUI venv's pip ---------------------------
@@ -33,6 +31,22 @@ CUSTOM_NODES=(
     "https://github.com/slahiri/ComfyUI-Workflow-Models-Downloader"
 )
 
+# ---- System packages (apt) — reinstalled each boot (ephemeral container) ----
+APT_PACKAGES=(
+    aria2
+)
+
+# =============================================================================
+#  0. System tools
+# =============================================================================
+install_tools(){
+    if [ ${#APT_PACKAGES[@]} -gt 0 ]; then
+        log "Installing system tools: ${APT_PACKAGES[*]}"
+        apt-get update -qq && apt-get install -y -qq "${APT_PACKAGES[@]}" \
+            || log "apt install had issues (continuing)"
+    fi
+}
+
 # =============================================================================
 #  1. Update ComfyUI to a release tag + new frontend
 # =============================================================================
@@ -41,13 +55,10 @@ update_comfyui(){
         git -C "${COMFYUI_DIR}" stash >/dev/null 2>&1
         log "Fetching ComfyUI tags..."
         git -C "${COMFYUI_DIR}" fetch --all --tags --prune || log "fetch failed (continuing)"
-
         local ref="${COMFYUI_REF}"
         if [ -z "${ref}" ]; then
-            # Resolve the most recent release tag (stable), not master HEAD
             ref="$(git -C "${COMFYUI_DIR}" describe --tags "$(git -C "${COMFYUI_DIR}" rev-list --tags --max-count=1)" 2>/dev/null)"
         fi
-
         if [ -n "${ref}" ]; then
             log "Checking out ComfyUI ${ref}"
             git -C "${COMFYUI_DIR}" checkout -f "${ref}" || log "checkout ${ref} failed (continuing)"
@@ -95,6 +106,7 @@ fetch_picker(){
 }
 
 log "Starting provisioning..."
+install_tools
 update_comfyui
 install_nodes
 fetch_picker
