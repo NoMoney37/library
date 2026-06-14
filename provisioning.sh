@@ -29,6 +29,11 @@ GETMODEL_URL="https://raw.githubusercontent.com/NoMoney37/library/refs/heads/mai
 CUSTOM_NODES=(
     "https://github.com/ltdrdata/ComfyUI-Manager"
     "https://github.com/slahiri/ComfyUI-Workflow-Models-Downloader"
+    "https://github.com/kijai/ComfyUI-WanVideoWrapper"
+    "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
+    "https://github.com/kijai/ComfyUI-KJNodes"
+    "https://github.com/kijai/ComfyUI-segment-anything-2"
+    "https://github.com/Fannovel16/comfyui_controlnet_aux"
 )
 
 # ---- System packages (apt) — reinstalled each boot (ephemeral container) ----
