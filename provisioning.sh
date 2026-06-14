@@ -51,6 +51,8 @@ install_tools(){
             || log "apt install had issues (continuing)"
     fi
 }
+apt-get update && apt-get install -y aria2
+which aria2c
 
 # =============================================================================
 #  1. Update ComfyUI to a release tag + new frontend
@@ -111,7 +113,7 @@ fetch_picker(){
 }
 
 log "Starting provisioning..."
-install_tools
+install_tools          # <-- add this line
 update_comfyui
 install_nodes
 fetch_picker
